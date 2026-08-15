@@ -45,16 +45,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          install -Dm755 bin/charly-amd64 /usr/local/bin/charly
-          mkdir -p /usr/lib/charly/plugins
-          install -Dm644 plugins/amd64/*.providers /usr/lib/charly/plugins/
-          install -Dm755 plugins/amd64/plugin-* /usr/lib/charly/plugins/
+          sudo install -Dm755 bin/charly-amd64 /usr/local/bin/charly
+          sudo mkdir -p /usr/lib/charly/plugins
+          sudo install -Dm644 plugins/amd64/*.providers /usr/lib/charly/plugins/
+          sudo install -Dm755 plugins/amd64/plugin-* /usr/lib/charly/plugins/
           mkdir -p /tmp/plugin
           gh release download --repo opencharly/plugin-generate-packages \
             --pattern 'generate-packages-linux-amd64' \
             --pattern 'generate-packages.providers' --dir /tmp/plugin
-          install -Dm755 /tmp/plugin/generate-packages-linux-amd64 /usr/lib/charly/plugins/generate-packages
-          install -Dm644 /tmp/plugin/generate-packages.providers /usr/lib/charly/plugins/generate-packages.providers
+          sudo install -Dm755 /tmp/plugin/generate-packages-linux-amd64 /usr/lib/charly/plugins/generate-packages
+          sudo install -Dm644 /tmp/plugin/generate-packages.providers /usr/lib/charly/plugins/generate-packages.providers
           charly version
 
       - name: Write the usign signing key
