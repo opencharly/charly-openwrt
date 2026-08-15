@@ -46,6 +46,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           install -Dm755 bin/charly-amd64 /usr/local/bin/charly
+          mkdir -p /usr/lib/charly/plugins
           install -Dm644 plugins/amd64/*.providers /usr/lib/charly/plugins/
           install -Dm755 plugins/amd64/plugin-* /usr/lib/charly/plugins/
           mkdir -p /tmp/plugin
