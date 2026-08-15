@@ -133,6 +133,12 @@ jobs:
             test "$(charly version)" = "$VERSION" || { echo "version mismatch: $(charly version) != $VERSION"; exit 1; }
           '
 
+      - name: Stage static files
+        run: |
+          # The upload path is repo/, so the committed landing page, .nojekyll,
+          # and public key must be copied in or the site root 404s.
+          cp index.html .nojekyll charly.pub repo/
+
       - name: Deploy to Pages
         uses: actions/configure-pages@v5
       - name: Upload Pages artifact
