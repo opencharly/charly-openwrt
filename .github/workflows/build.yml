@@ -29,6 +29,9 @@ jobs:
           mkdir -p bin plugins
           gh release download v${{ inputs.version }} --repo opencharly/charly \
             --pattern 'charly-linux-*' --dir bin
+          for f in bin/charly-linux-*; do
+            mv "$f" "bin/charly-${f#bin/charly-linux-}"
+          done
           gh release download v${{ inputs.version }} --repo opencharly/charly \
             --pattern 'charly-plugins-linux-*.tar.gz' --dir .
           gh release download v${{ inputs.version }} --repo opencharly/charly \
