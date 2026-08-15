@@ -59,9 +59,9 @@ jobs:
 
       - name: Write the usign signing key
         run: |
-          # The secret holds the raw usign secret key (untrusted comment header
-          # + base64 body) — write it directly, no base64 decode.
-          echo "${{ secrets.USIGN_PRIVATE_KEY }}" > charly.usign-secret
+          # The secret holds base64 of the usign secret key file (the
+          # "untrusted comment" header + base64 body) — decode it back.
+          echo "${{ secrets.USIGN_PRIVATE_KEY }}" | base64 -d > charly.usign-secret
           chmod 600 charly.usign-secret
 
       - name: Build packages
