@@ -101,8 +101,15 @@ jobs:
 
       - name: Create stable copies
         run: |
+          # nFPM names the .ipk <name>_<version>_<arch>.ipk with the ipk arch
+          # (amd64 → x86_64, arm64 → arm64), not the GOARCH — the glob must use
+          # the ipk arch to find the newest default-variant package.
           for arch in amd64 arm64; do
-            newest=$(ls repo/$arch/charly_*_$arch.ipk | grep -v minimal | grep -v full | sort -V | tail -1)
+            case "$arch" in
+              amd64) ipkarch=x86_64 ;;
+              arm64) ipkarch=arm64 ;;
+            esac
+            newest=$(ls repo/$arch/charly_*_$ipkarch.ipk | grep -v minimal | grep -v full | sort -V | tail -1)
             cp "$newest" repo/$arch/charly-$arch.ipk
           done
 
@@ -120,7 +127,7 @@ jobs:
             mkdir -p /var/lock /etc/opkg/keys
             fp=$(usign -F -p /ws/charly.pub)
             cp /ws/charly.pub /etc/opkg/keys/$fp
-            echo "src/gz charly file:///ws/amd64" > /etc/opkg/customfeeds.conf
+            echo "src/gz charly file:///ws/repo/amd64" > /etc/opkg/customfeeds.conf
             opkg update
             opkg install charly
             test "$(charly version)" = "$VERSION" || { echo "version mismatch: $(charly version) != $VERSION"; exit 1; }
