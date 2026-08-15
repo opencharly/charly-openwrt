@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>charly-openwrt — OpenWrt package feed for charly</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 60rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+    pre { background: #f4f4f4; padding: 1rem; border-radius: 6px; overflow-x: auto; }
+    code { background: #f4f4f4; padding: 0.1rem 0.3rem; border-radius: 4px; }
+    table { border-collapse: collapse; }
+    th, td { border: 1px solid #ddd; padding: 0.4rem 0.8rem; text-align: left; }
+  </style>
+</head>
+<body>
+  <h1>charly-openwrt</h1>
+  <p>The OpenWrt package feed for <a href="https://github.com/opencharly/charly">charly</a> — the OpenCharly CLI and its composed toolchain, packaged as <code>.ipk</code> for <code>amd64</code> and <code>arm64</code>.</p>
+
+  <h2>Add the feed</h2>
+  <pre>mkdir -p /etc/opkg/keys
+wget -O /tmp/charly.pub https://opencharly.github.io/charly-openwrt/charly.pub
+cp /tmp/charly.pub /etc/opkg/keys/$(usign -F -p /tmp/charly.pub)
+echo "src/gz charly https://opencharly.github.io/charly-openwrt/amd64" >> /etc/opkg/customfeeds.conf
+opkg update
+opkg install charly</pre>
+  <p>For <code>arm64</code> hosts, use <code>https://opencharly.github.io/charly-openwrt/arm64</code> in <code>customfeeds.conf</code>.</p>
+
+  <h2>Direct install</h2>
+  <table>
+    <tr><th>Architecture</th><th>Package</th></tr>
+    <tr><td>amd64</td><td><a href="amd64/charly-amd64.ipk">charly-amd64.ipk</a></td></tr>
+    <tr><td>arm64</td><td><a href="arm64/charly-arm64.ipk">charly-arm64.ipk</a></td></tr>
+  </table>
+
+  <h2>Variants</h2>
+  <table>
+    <tr><th>Package</th><th>Plugin set</th></tr>
+    <tr><td><code>charly</code></td><td>secrets, feature, vm, doctor, clean, settings, candy</td></tr>
+    <tr><td><code>charly-full</code></td><td>the default set + udev, preempt</td></tr>
+    <tr><td><code>charly-minimal</code></td><td>doctor, clean, settings</td></tr>
+  </table>
+
+  <h2>Feed key</h2>
+  <p><a href="charly.pub">charly.pub</a> — the usign public key used to sign the <code>Packages</code> index. Install it into <code>/etc/opkg/keys/</code> named by its fingerprint (<code>usign -F -p charly.pub</code>).</p>
+</body>
+</html>
