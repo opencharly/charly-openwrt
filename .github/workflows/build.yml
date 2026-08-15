@@ -122,7 +122,7 @@ jobs:
           # podman/qemu/libvirt in its repos, so full charly functionality is
           # not expected — the test asserts the .ipk installs and the binary
           # runs (charly version).
-          docker run --rm -v "${{ github.workspace }}:/ws:ro" openwrt/rootfs:x86-64-24.10.8 sh -c '
+          docker run --rm -e VERSION="$VERSION" -v "${{ github.workspace }}:/ws:ro" openwrt/rootfs:x86-64-24.10.8 sh -c '
             set -e
             mkdir -p /var/lock /etc/opkg/keys
             fp=$(usign -F -p /ws/charly.pub)
