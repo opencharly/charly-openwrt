@@ -162,13 +162,18 @@ jobs:
             opkg install charly
             test "$(charly version)" = "$VERSION" || { echo "version mismatch: $(charly version) != $VERSION"; exit 1; }
             test -x /usr/lib/charly/plugins/charly-lib || { echo "charly-lib shared host missing"; exit 1; }
-            _link=$(ls /usr/lib/charly/plugins/plugin-* 2>/dev/null | grep -v "\.providers$" | head -1)
-            test -n "$_link" && test "$(readlink "$_link")" = "charly-lib" || { echo "plugin symlink -> charly-lib missing"; exit 1; }
-            # LOAD: charly connects a baked plugin THROUGH the symlinked host (the
-            # cutover real risk) - captured without printing host-health noise.
-            _doctor=$(charly doctor 2>&1) || true
-            printf "%s" "$_doctor" | grep -q "served from baked binary" || { echo "the installed shared host did not load a baked plugin"; exit 1; }
-            echo "shared-host layout + plugin load OK"
+            ls -l /usr/lib/charly/plugins
+            _n=0
+            for _m in /usr/lib/charly/plugins/*.providers; do
+              _w=$(basename "$_m" .providers)
+              test -L "/usr/lib/charly/plugins/$_w" || { echo "$_w: plugin symlink missing"; exit 1; }
+              test "$(readlink "/usr/lib/charly/plugins/$_w")" = "charly-lib" || { echo "$_w: symlink does not target charly-lib"; exit 1; }
+              _h=$(CHARLY_PLUGIN=charly-plugin-v1 timeout 3 "/usr/lib/charly/plugins/$_w" 2>/dev/null | tail -1)
+              case "$_h" in 1\|2\|*) ;; *) echo "$_w: shared host did not serve (got $_h)"; exit 1 ;; esac
+              _n=$((_n + 1))
+            done
+            test "$_n" -ge 1 || { echo "no plugin manifests installed"; exit 1; }
+            echo "shared-host serves all $_n welded plugins"
           '
 
       - name: Stage static files
