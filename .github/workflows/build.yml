@@ -168,7 +168,11 @@ jobs:
               _w=$(basename "$_m" .providers)
               test -L "/usr/lib/charly/plugins/$_w" || { echo "$_w: plugin symlink missing"; exit 1; }
               test "$(readlink "/usr/lib/charly/plugins/$_w")" = "charly-lib" || { echo "$_w: symlink does not target charly-lib"; exit 1; }
-              _h=$(CHARLY_PLUGIN=charly-plugin-v1 timeout 3 "/usr/lib/charly/plugins/$_w" 2>/dev/null | tail -1)
+              CHARLY_PLUGIN=charly-plugin-v1 "/usr/lib/charly/plugins/$_w" >/tmp/_handshake 2>/dev/null &
+              _p=$!
+              sleep 1
+              kill "$_p" 2>/dev/null
+              _h=$(tail -1 /tmp/_handshake)
               case "$_h" in 1\|2\|*) ;; *) echo "$_w: shared host did not serve (got $_h)"; exit 1 ;; esac
               _n=$((_n + 1))
             done
