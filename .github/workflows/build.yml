@@ -6,6 +6,10 @@ on:
       version:
         description: 'charly release CalVer to package (e.g. 2026.227.1026)'
         required: true
+      charly_lib_version:
+        description: 'charly-lib release TAG (pinned) to fetch the shared host from'
+        required: true
+        default: 'v2026.256.1131'
 
 permissions:
   contents: write
@@ -33,12 +37,30 @@ jobs:
             mv "$f" "bin/charly-${f#bin/charly-linux-}"
           done
           gh release download v${{ inputs.version }} --repo opencharly/charly \
-            --pattern 'charly-plugins-linux-*.tar.gz' --dir .
-          gh release download v${{ inputs.version }} --repo opencharly/charly \
             --pattern 'charly-candy-charly.yml' --dir .
+          # The welded plugins no longer ship as per-plugin binaries: the shared
+          # charly-lib host serves them all (opencharly/sdk#258 packagekit hard
+          # cutover). Its host + .providers manifests are fetched next.
+
+      - name: Download the charly-lib shared plugin host
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p plugins/amd64 plugins/arm64 .charly-lib
+          gh release download "${{ inputs.charly_lib_version }}" --repo opencharly/charly-lib \
+            --pattern 'charly-lib-linux-amd64' \
+            --pattern 'charly-lib-linux-arm64' \
+            --pattern '*.providers' --dir .charly-lib --clobber
           for arch in amd64 arm64; do
-            mkdir -p plugins/$arch
-            tar -xzf charly-plugins-linux-$arch.tar.gz -C plugins/$arch
+            # The host binary (downloaded non-executable) + one plugin-<word>
+            # symlink per welded plugin + its .providers manifest — the ONE
+            # layout packagekit accepts.
+            install -m0755 ".charly-lib/charly-lib-linux-$arch" "plugins/$arch/charly-lib"
+            for f in .charly-lib/*.providers; do
+              n=$(basename "$f" .providers)
+              cp "$f" "plugins/$arch/$n.providers"
+              ln -sf charly-lib "plugins/$arch/$n"
+            done
           done
 
       - name: Install charly + baked generate-packages plugin
@@ -47,8 +69,14 @@ jobs:
         run: |
           sudo install -Dm755 bin/charly-amd64 /usr/local/bin/charly
           sudo mkdir -p /usr/lib/charly/plugins
-          sudo install -Dm644 plugins/amd64/*.providers /usr/lib/charly/plugins/
-          sudo install -Dm755 plugins/amd64/plugin-* /usr/lib/charly/plugins/
+          # Shared host once + plugin-<word> symlinks (the loader contract is
+          # unchanged: a .providers manifest beside an executable named plugin-<word>).
+          sudo install -Dm755 plugins/amd64/charly-lib /usr/lib/charly/plugins/charly-lib
+          for f in plugins/amd64/*.providers; do
+            n=$(basename "$f" .providers)
+            sudo install -Dm644 "$f" "/usr/lib/charly/plugins/$n.providers"
+            sudo ln -sf charly-lib "/usr/lib/charly/plugins/$n"
+          done
           mkdir -p /tmp/plugin
           gh release download --repo opencharly/plugin-generate-packages \
             --pattern 'generate-packages-linux-amd64' \
@@ -133,6 +161,23 @@ jobs:
             opkg update
             opkg install charly
             test "$(charly version)" = "$VERSION" || { echo "version mismatch: $(charly version) != $VERSION"; exit 1; }
+            test -x /usr/lib/charly/plugins/charly-lib || { echo "charly-lib shared host missing"; exit 1; }
+            ls -l /usr/lib/charly/plugins
+            for _w in plugin-secrets plugin-feature plugin-vm plugin-doctor plugin-clean plugin-settings plugin-candy plugin-mcp plugin-review plugin-pipeline; do
+              test -L "/usr/lib/charly/plugins/$_w" || { echo "$_w: plugin-<word> symlink missing"; exit 1; }
+              test "$(readlink "/usr/lib/charly/plugins/$_w")" = "charly-lib" || { echo "$_w: not a symlink to charly-lib"; exit 1; }
+              test -f "/usr/lib/charly/plugins/$_w.providers" || { echo "$_w.providers missing"; exit 1; }
+              _fifo=/tmp/_hs.$$; mkfifo "$_fifo"
+              CHARLY_PLUGIN=charly-plugin-v1 "/usr/lib/charly/plugins/$_w" >"$_fifo" 2>/dev/null &
+              _p=$!
+              IFS= read -r -t 3 _h < "$_fifo" || _h=
+              kill "$_p" 2>/dev/null; rm -f "$_fifo"
+              case "$_h" in *grpc*) ;; *) echo "$_w: shared host did not serve (got $_h)"; exit 1 ;; esac
+            done
+            # charly DISCOVERS the welded command words from the .providers manifests
+            # at startup - a charly-level, zero-warning discovery assertion.
+            charly --help 2>&1 | grep -q "secrets" || { echo "charly did not discover the welded command words"; exit 1; }
+            echo "shared-host serves all 10 welded plugins + charly discovers them"
           '
 
       - name: Stage static files
