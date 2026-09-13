@@ -164,6 +164,11 @@ jobs:
             test -x /usr/lib/charly/plugins/charly-lib || { echo "charly-lib shared host missing"; exit 1; }
             _link=$(ls /usr/lib/charly/plugins/plugin-* 2>/dev/null | grep -v "\.providers$" | head -1)
             test -n "$_link" && test "$(readlink "$_link")" = "charly-lib" || { echo "plugin symlink -> charly-lib missing"; exit 1; }
+            # LOAD: charly connects a baked plugin THROUGH the symlinked host (the
+            # cutover real risk) - captured without printing host-health noise.
+            _doctor=$(charly doctor 2>&1) || true
+            printf "%s" "$_doctor" | grep -q "served from baked binary" || { echo "the installed shared host did not load a baked plugin"; exit 1; }
+            echo "shared-host layout + plugin load OK"
           '
 
       - name: Stage static files
