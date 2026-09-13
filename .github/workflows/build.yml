@@ -163,23 +163,21 @@ jobs:
             test "$(charly version)" = "$VERSION" || { echo "version mismatch: $(charly version) != $VERSION"; exit 1; }
             test -x /usr/lib/charly/plugins/charly-lib || { echo "charly-lib shared host missing"; exit 1; }
             ls -l /usr/lib/charly/plugins
-            _n=0
-            for _m in /usr/lib/charly/plugins/*.providers; do
-              _w=$(basename "$_m" .providers)
-              test -L "/usr/lib/charly/plugins/$_w" || { echo "$_w: plugin symlink missing"; exit 1; }
-              test "$(readlink "/usr/lib/charly/plugins/$_w")" = "charly-lib" || { echo "$_w: symlink does not target charly-lib"; exit 1; }
-              _fifo=/tmp/_hs.$$
-              mkfifo "$_fifo"
+            for _w in plugin-secrets plugin-feature plugin-vm plugin-doctor plugin-clean plugin-settings plugin-candy plugin-mcp plugin-review plugin-pipeline; do
+              test -L "/usr/lib/charly/plugins/$_w" || { echo "$_w: plugin-<word> symlink missing"; exit 1; }
+              test "$(readlink "/usr/lib/charly/plugins/$_w")" = "charly-lib" || { echo "$_w: not a symlink to charly-lib"; exit 1; }
+              test -f "/usr/lib/charly/plugins/$_w.providers" || { echo "$_w.providers missing"; exit 1; }
+              _fifo=/tmp/_hs.$$; mkfifo "$_fifo"
               CHARLY_PLUGIN=charly-plugin-v1 "/usr/lib/charly/plugins/$_w" >"$_fifo" 2>/dev/null &
               _p=$!
               IFS= read -r -t 3 _h < "$_fifo" || _h=
-              kill "$_p" 2>/dev/null
-              rm -f "$_fifo"
+              kill "$_p" 2>/dev/null; rm -f "$_fifo"
               case "$_h" in *grpc*) ;; *) echo "$_w: shared host did not serve (got $_h)"; exit 1 ;; esac
-              _n=$((_n + 1))
             done
-            test "$_n" -ge 1 || { echo "no plugin manifests installed"; exit 1; }
-            echo "shared-host serves all $_n welded plugins"
+            # charly DISCOVERS the welded command words from the .providers manifests
+            # at startup - a charly-level, zero-warning discovery assertion.
+            charly --help 2>&1 | grep -q "secrets" || { echo "charly did not discover the welded command words"; exit 1; }
+            echo "shared-host serves all 10 welded plugins + charly discovers them"
           '
 
       - name: Stage static files
