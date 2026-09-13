@@ -162,7 +162,7 @@ jobs:
             opkg install charly
             test "$(charly version)" = "$VERSION" || { echo "version mismatch: $(charly version) != $VERSION"; exit 1; }
             test -x /usr/lib/charly/plugins/charly-lib || { echo "charly-lib shared host missing"; exit 1; }
-            _link=$(ls /usr/lib/charly/plugins/plugin-* 2>/dev/null | grep -v '\.providers$' | head -1)
+            _link=$(ls /usr/lib/charly/plugins/plugin-* 2>/dev/null | grep -v "\.providers$" | head -1)
             test -n "$_link" && test "$(readlink "$_link")" = "charly-lib" || { echo "plugin symlink -> charly-lib missing"; exit 1; }
           '
 
